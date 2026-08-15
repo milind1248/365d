@@ -4,9 +4,10 @@ from pathlib import Path
 import streamlit as st
 from PIL import Image
 
+from ai.alert_engine import generate_disease_alert
 from ai.classifier import AI_ADVISORY_DISCLAIMER, diagnose, model_metadata
 from core import auth, db
-from core.helpers import add_notification, confidence_badge, plot_options, risk_badge
+from core.helpers import confidence_badge, plot_options, risk_badge
 
 user = auth.require_login()
 owner_id = user["id"]
@@ -155,16 +156,12 @@ if image is not None:
                     "used_cloud_fallback": 0,
                 },
             )
-            if result.risk_level in ("high", "severe"):
-                add_notification(
-                    owner_id, "scan_alert", f"High risk: {result.name_en}",
-                    f"A recent scan detected {result.name_en} at {result.severity_percent:.0f}% severity. Consider expert review.",
-                )
+            generate_disease_alert(owner_id, result.name_en, result.risk_level, result.severity_percent, "mulberry leaf")
             st.success("Scan saved. View it on the Dashboard or Scan History.")
 
 st.divider()
 st.subheader("Scan history")
-history = db.fetch_all("scan_record", "owner_id = ?", (owner_id,), order_by="captured_at DESC")
+history = db.fetch_all("scan_record", "owner_id = ? AND scan_type != 'silkworm'", (owner_id,), order_by="captured_at DESC")
 if not history:
     st.caption("No scans saved yet.")
 else:

@@ -19,6 +19,11 @@ weather-based spray guidance and expert help — built to run on
 | **Knowledge base** | `data/diseases_knowledge_base.json`, `data/labels.txt` — copied from the Flutter app's `assets/`, so both apps share the same 25 disease/pest/deficiency definitions. |
 | **Plot location picker** | `core/geocoding.py` — resolves an Indian PIN code or city name to lat/lon via India Post + Open-Meteo's free geocoding API (with a state-centroid fallback for renamed-city mismatches), plus a "use my GPS" button (`streamlit-geolocation`) — both feed the Latitude/Longitude fields in **My Farm → Add a new plot**, which drive the weather/disease-risk forecasts. |
 | **User management (admin)** | `app_pages/admin.py` — **Account → User Management**, gated by a hardcoded password (`365D` — see warning below). Lists every account (name, contact, guest/registered, created date, last login), with revoke/restore access and permanent delete (cascades the user's plots/scans/logs/records). Revoking mid-session force-logs-out that user on their next click. |
+| **Persistent login** | `core/session_cookie.py` + `core/auth.py` — a "remember me" browser cookie (30 days, `REMEMBER_ME_DAYS`) backed by a hashed token in the `user_session` table, so a page reload or new tab doesn't log the farmer out. |
+| **Keep-alive ping** | `.github/workflows/ping-streamlit.yml` — a scheduled GitHub Actions job (every 10 minutes) that pings the deployed app so Streamlit Community Cloud doesn't put it to sleep from inactivity. **Edit the placeholder URL in that file once the app is deployed** (see comment inside). |
+| **Silkworm AI scan** | `app_pages/scan_silkworm.py` + `ai/silkworm_classifier.py` — a second, independent MobileNetV3-Small model fine-tuned on real silkworm larva photos, for healthy / Grasserie / generic-infected detection. See "About the silkworm AI model" below. |
+| **Silkworm rearing tracking** | `app_pages/silkworm_tracking.py` — log rearing batches (instar stage, mortality %, last-fed time); feeds the Alert Engine's feeding/instar/mortality reminders. |
+| **Alert Engine** | `ai/alert_engine.py` — categorizes and prioritizes every notification (disease/climate/feeding/instar/mortality/general × critical/high/medium/low), with dedup so the same condition doesn't re-alert every rerun. **Account → Notifications** got a full rework: filter by category/status, mark alerts completed/skipped with an optional outcome note. The Dashboard shows a live open-alerts summary by priority. |
 
 ## ⚠️ Admin access is hardcoded — fix before any real deployment
 
@@ -60,6 +65,35 @@ on one of its 3 covered classes. Either way, **this is advisory
 pattern-matching, not clinical diagnosis.** To extend real-photo coverage to
 more conditions, add labeled images for them and retrain following
 `training/README.md`.
+
+## About the silkworm AI model
+
+Silkworm scanning (**Farm → Scan Silkworm**) uses a **separate** model trained
+on **4,862 real photos** from the Kaggle
+[`tatinanikhitha/silkworm`](https://www.kaggle.com/datasets/tatinanikhitha/silkworm)
+dataset (Andhra Pradesh sericulture field data): 2,379 healthy, 2,286 generic
+"infected", and 197 confirmed **Grasserie** (a specific, named viral disease).
+It was compared against 10 other model/feature combinations (hand-crafted
+color/texture features, and a fully fine-tuned MobileNetV3-Small, each also
+run through 5 classical algorithms) — see `training/train_silkworm_compare.py`
+and `data/silkworm_training_results.json` for the full comparison and
+confusion matrices. Unlike the mulberry model, the winner here was **not**
+the fine-tuned network: **frozen MobileNetV3-Small (ImageNet) embeddings fed
+into an SVM (RBF)** scored highest at **97.9% test accuracy** (0.908
+macro-F1) on a held-out 1,215-photo split — narrowly ahead of the fine-tuned
+model's 97.8%, and picked by the same strict test-accuracy tie-break rule
+used for the mulberry model, for consistency.
+
+**Honesty note:** the source dataset only names one disease (Grasserie)
+individually — its other diseased photos are labeled generically as
+"Infected," not broken into Flacherie, Muscardine, Pébrine, etc. A result of
+"signs of illness (unconfirmed cause)" means the model is confident
+something is wrong, not which specific disease — `data/silkworm_knowledge_base.json`'s
+`infected_silkworm` entry says this explicitly and steers the farmer to
+**Submit to Expert** rather than guessing. Unlike the mulberry model, there's
+no synthetic-fallback classifier here: silkworm body-color heuristics aren't
+a validated signal the way leaf-color heuristics are, so below-confidence
+results show "inconclusive" instead of inventing a diagnosis.
 
 ## Chatbot setup (Groq)
 
@@ -111,21 +145,27 @@ only that one module needs to change.
 ```
 streamlit_app.py         # entry point: auth gate + navigation
 app_pages/                # one file per page (dashboard, scan, farm, logs, ...)
+  scan_silkworm.py         # silkworm disease AI scan page
+  silkworm_tracking.py     # silkworm rearing batch tracking (instar/feeding/mortality)
 core/
   db.py                  # SQLite schema + CRUD helpers
   auth.py                # register/login/guest session, access-revocation check
+  session_cookie.py        # "remember me" persistent login cookie
   helpers.py              # shared UI helpers (badges, plot pickers, notifications)
   geocoding.py             # PIN code / city -> lat/lon (India Post + Open-Meteo geocoding)
 ai/
   features.py             # real pixel feature extraction
   severity.py              # affected-area heuristic
-  classifier.py            # blends the two models below + inference
+  classifier.py            # blends the two mulberry models + inference
   mobilenet_classifier.py  # real-photo-trained MobileNetV3-Small (healthy/rust/spot)
   train_model.py           # trains & saves the synthetic-feature RandomForest (25 classes)
+  silkworm_classifier.py   # real-photo-trained MobileNet-embed + SVM for silkworm disease
+  alert_engine.py           # categorized/prioritized notification generation
   disease_risk.py          # weather -> risk rules
   weather.py                # Open-Meteo forecast client
   chatbot.py                 # Groq-powered chatbot, offline knowledge-base fallback
-training/                 # dataset download/extraction + 11-model comparison script, see training/README.md
+training/                 # dataset download/extraction + model comparison scripts, see training/README.md
 data/                     # knowledge base, labels, trained models, SQLite DB (gitignored), uploads (gitignored)
 assets/images/logo.png    # brand logo
+.github/workflows/ping-streamlit.yml  # scheduled keep-alive ping (edit URL after deploying)
 ```

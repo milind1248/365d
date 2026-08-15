@@ -2,10 +2,11 @@ import datetime as dt
 
 import streamlit as st
 
+from ai import alert_engine
 from ai.disease_risk import assess_day
 from ai.weather import get_forecast_with_meta
 from core import auth, db
-from core.helpers import live_data_caption, risk_badge
+from core.helpers import live_data_caption, priority_badge, risk_badge
 
 user = auth.require_login()
 owner_id = user["id"]
@@ -17,6 +18,24 @@ plots = db.fetch_all("farm_plot", "owner_id = ?", (owner_id,))
 tasks = db.fetch_all("crop_task", "owner_id = ? AND is_completed = 0", (owner_id,))
 scans = db.fetch_all("scan_record", "owner_id = ?", (owner_id,), order_by="captured_at DESC")
 expert_cases_open = db.count("expert_case", "owner_id = ? AND status != 'closed'", (owner_id,))
+
+for batch in db.fetch_all("silkworm_batch", "owner_id = ?", (owner_id,)):
+    alert_engine.run_batch_checks(owner_id, batch)
+
+open_alerts = db.fetch_all("notification_item", "owner_id = ? AND (status IS NULL OR status = 'open')", (owner_id,))
+if open_alerts:
+    critical = sum(1 for a in open_alerts if a.get("priority") == "critical")
+    high = sum(1 for a in open_alerts if a.get("priority") == "high")
+    medium = sum(1 for a in open_alerts if a.get("priority") == "medium")
+    low = sum(1 for a in open_alerts if (a.get("priority") or "low") == "low")
+    with st.container(border=True):
+        st.markdown(f"**🔔 Today's alerts** — {len(open_alerts)} open")
+        s1, s2, s3, s4, s5 = st.columns([1, 1, 1, 1, 1.4])
+        s1.markdown(f"{priority_badge('critical')} {critical}")
+        s2.markdown(f"{priority_badge('high')} {high}")
+        s3.markdown(f"{priority_badge('medium')} {medium}")
+        s4.markdown(f"{priority_badge('low')} {low}")
+        s5.page_link("app_pages/notifications.py", label="View all alerts", icon=":material/notifications:")
 
 col1, col2, col3, col4 = st.columns(4)
 col1.metric("Farm plots", len(plots))
@@ -60,6 +79,7 @@ with right:
 
     fc = get_forecast_with_meta(lat, lon)
     assessment = assess_day(fc.records[0])
+    alert_engine.generate_climate_alerts(owner_id, assessment)
     with st.container(border=True):
         st.caption(live_data_caption(fc.source, fc.fetched_at))
         st.markdown(f"Overall risk today: {risk_badge(assessment.overall_risk)}")

@@ -1,10 +1,12 @@
 import streamlit as st
 
-from core import auth, db
+from core import auth, db, session_cookie
 
 st.set_page_config(page_title="365Dfarms Mulberry AI", page_icon="🌱", layout="wide")
 db.init_db()
 
+cookie_manager = session_cookie.get_manager()
+session_cookie.restore_session(cookie_manager)
 user = auth.current_user()
 
 if not user:
@@ -29,6 +31,7 @@ if not user:
             if submitted:
                 ok, message = auth.login(identifier, password)
                 if ok:
+                    session_cookie.mark_for_remember(st.session_state[auth.SESSION_USER_KEY])
                     st.rerun()
                 else:
                     st.error(message)
@@ -44,6 +47,7 @@ if not user:
             if submitted:
                 ok, message = auth.register(full_name, mobile, email, password, lang)
                 if ok:
+                    session_cookie.mark_for_remember(st.session_state[auth.SESSION_USER_KEY])
                     st.rerun()
                 else:
                     st.error(message)
@@ -52,9 +56,12 @@ if not user:
             st.write("Explore the app without creating an account. Guest data stays on this server only.")
             if st.button("Continue as guest", width="stretch"):
                 auth.continue_as_guest()
+                session_cookie.mark_for_remember(st.session_state[auth.SESSION_USER_KEY])
                 st.rerun()
 
     st.stop()
+
+session_cookie.apply_pending_remember(cookie_manager)
 
 pages = {
     "": [
@@ -63,6 +70,8 @@ pages = {
     "Farm": [
         st.Page("app_pages/my_farm.py", title="My Farm", icon=":material/grass:"),
         st.Page("app_pages/scan_disease.py", title="Scan Disease", icon=":material/photo_camera:"),
+        st.Page("app_pages/scan_silkworm.py", title="Scan Silkworm", icon=":material/bug_report:"),
+        st.Page("app_pages/silkworm_tracking.py", title="Silkworm Rearing", icon=":material/hive:"),
         st.Page("app_pages/ai_model_report.py", title="AI Model Report", icon=":material/analytics:"),
         st.Page("app_pages/disease_library.py", title="Disease Library", icon=":material/menu_book:"),
         st.Page("app_pages/crop_calendar.py", title="Crop Calendar", icon=":material/event:"),
@@ -89,6 +98,7 @@ with st.sidebar:
     st.markdown(f"**{user['full_name'] or 'Farmer'}**")
     st.caption(user.get("village") or ("Guest session" if user.get("is_guest") else "Mulberry farmer"))
     if st.button("Log out", icon=":material/logout:", width="stretch"):
+        session_cookie.forget(cookie_manager)
         auth.logout()
         st.rerun()
     st.divider()

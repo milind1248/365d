@@ -1,0 +1,500 @@
+{
+  "class_names": [
+    "Grasserie",
+    "Healthy",
+    "Infected"
+  ],
+  "train_size": 3645,
+  "test_size": 1215,
+  "class_counts": {
+    "Grasserie": 197,
+    "Healthy": 2377,
+    "Infected": 2286
+  },
+  "results": [
+    {
+      "feature_set": "mobilenet_embed",
+      "algorithm": "SVM (RBF)",
+      "accuracy": 0.9794,
+      "f1_macro": 0.9079,
+      "confusion_matrix": [
+        [
+          34,
+          0,
+          15
+        ],
+        [
+          0,
+          593,
+          1
+        ],
+        [
+          8,
+          1,
+          563
+        ]
+      ],
+      "confusion_matrix_png": "cm_mobilenet_embed_SVM_RBF.png",
+      "per_class": {
+        "Grasserie": {
+          "precision": 0.8095238095238095,
+          "recall": 0.6938775510204082,
+          "f1-score": 0.7472527472527473,
+          "support": 49.0
+        },
+        "Healthy": {
+          "precision": 0.9983164983164983,
+          "recall": 0.9983164983164983,
+          "f1-score": 0.9983164983164983,
+          "support": 594.0
+        },
+        "Infected": {
+          "precision": 0.9723661485319517,
+          "recall": 0.9842657342657343,
+          "f1-score": 0.9782797567332754,
+          "support": 572.0
+        }
+      }
+    },
+    {
+      "feature_set": "mobilenet_embed",
+      "algorithm": "LogisticRegression",
+      "accuracy": 0.9778,
+      "f1_macro": 0.9136,
+      "confusion_matrix": [
+        [
+          35,
+          0,
+          14
+        ],
+        [
+          0,
+          593,
+          1
+        ],
+        [
+          7,
+          5,
+          560
+        ]
+      ],
+      "confusion_matrix_png": "cm_mobilenet_embed_LogisticRegression.png",
+      "per_class": {
+        "Grasserie": {
+          "precision": 0.8333333333333334,
+          "recall": 0.7142857142857143,
+          "f1-score": 0.7692307692307693,
+          "support": 49.0
+        },
+        "Healthy": {
+          "precision": 0.9916387959866221,
+          "recall": 0.9983164983164983,
+          "f1-score": 0.9949664429530202,
+          "support": 594.0
+        },
+        "Infected": {
+          "precision": 0.9739130434782609,
+          "recall": 0.9790209790209791,
+          "f1-score": 0.976460331299041,
+          "support": 572.0
+        }
+      }
+    },
+    {
+      "feature_set": "mobilenet_finetuned",
+      "algorithm": "MobileNetV3-Small (fine-tuned)",
+      "accuracy": 0.9778,
+      "f1_macro": 0.8984,
+      "confusion_matrix": [
+        [
+          31,
+          0,
+          18
+        ],
+        [
+          1,
+          591,
+          2
+        ],
+        [
+          5,
+          1,
+          566
+        ]
+      ],
+      "confusion_matrix_png": "cm_mobilenet_finetuned_MobileNetV3-Small_fine-tuned.png",
+      "per_class": {
+        "Grasserie": {
+          "precision": 0.8378378378378378,
+          "recall": 0.6326530612244898,
+          "f1-score": 0.7209302325581395,
+          "support": 49.0
+        },
+        "Healthy": {
+          "precision": 0.9983108108108109,
+          "recall": 0.9949494949494949,
+          "f1-score": 0.9966273187183811,
+          "support": 594.0
+        },
+        "Infected": {
+          "precision": 0.9658703071672355,
+          "recall": 0.9895104895104895,
+          "f1-score": 0.9775474956822107,
+          "support": 572.0
+        }
+      }
+    },
+    {
+      "feature_set": "mobilenet_embed",
+      "algorithm": "kNN",
+      "accuracy": 0.9728,
+      "f1_macro": 0.8949,
+      "confusion_matrix": [
+        [
+          31,
+          0,
+          18
+        ],
+        [
+          0,
+          594,
+          0
+        ],
+        [
+          6,
+          9,
+          557
+        ]
+      ],
+      "confusion_matrix_png": "cm_mobilenet_embed_kNN.png",
+      "per_class": {
+        "Grasserie": {
+          "precision": 0.8378378378378378,
+          "recall": 0.6326530612244898,
+          "f1-score": 0.7209302325581395,
+          "support": 49.0
+        },
+        "Healthy": {
+          "precision": 0.9850746268656716,
+          "recall": 1.0,
+          "f1-score": 0.9924812030075187,
+          "support": 594.0
+        },
+        "Infected": {
+          "precision": 0.9686956521739131,
+          "recall": 0.9737762237762237,
+          "f1-score": 0.9712292938099389,
+          "support": 572.0
+        }
+      }
+    },
+    {
+      "feature_set": "mobilenet_embed",
+      "algorithm": "GradientBoosting",
+      "accuracy": 0.9704,
+      "f1_macro": 0.866,
+      "confusion_matrix": [
+        [
+          26,
+          2,
+          21
+        ],
+        [
+          0,
+          593,
+          1
+        ],
+        [
+          7,
+          5,
+          560
+        ]
+      ],
+      "confusion_matrix_png": "cm_mobilenet_embed_GradientBoosting.png",
+      "per_class": {
+        "Grasserie": {
+          "precision": 0.7878787878787878,
+          "recall": 0.5306122448979592,
+          "f1-score": 0.6341463414634146,
+          "support": 49.0
+        },
+        "Healthy": {
+          "precision": 0.9883333333333333,
+          "recall": 0.9983164983164983,
+          "f1-score": 0.9932998324958124,
+          "support": 594.0
+        },
+        "Infected": {
+          "precision": 0.9621993127147767,
+          "recall": 0.9790209790209791,
+          "f1-score": 0.9705372616984402,
+          "support": 572.0
+        }
+      }
+    },
+    {
+      "feature_set": "hand_crafted",
+      "algorithm": "RandomForest",
+      "accuracy": 0.9646,
+      "f1_macro": 0.8478,
+      "confusion_matrix": [
+        [
+          23,
+          1,
+          25
+        ],
+        [
+          0,
+          592,
+          2
+        ],
+        [
+          6,
+          9,
+          557
+        ]
+      ],
+      "confusion_matrix_png": "cm_hand_crafted_RandomForest.png",
+      "per_class": {
+        "Grasserie": {
+          "precision": 0.7931034482758621,
+          "recall": 0.46938775510204084,
+          "f1-score": 0.5897435897435898,
+          "support": 49.0
+        },
+        "Healthy": {
+          "precision": 0.9833887043189369,
+          "recall": 0.9966329966329966,
+          "f1-score": 0.9899665551839465,
+          "support": 594.0
+        },
+        "Infected": {
+          "precision": 0.9537671232876712,
+          "recall": 0.9737762237762237,
+          "f1-score": 0.9636678200692042,
+          "support": 572.0
+        }
+      }
+    },
+    {
+      "feature_set": "hand_crafted",
+      "algorithm": "kNN",
+      "accuracy": 0.9605,
+      "f1_macro": 0.8621,
+      "confusion_matrix": [
+        [
+          27,
+          0,
+          22
+        ],
+        [
+          0,
+          585,
+          9
+        ],
+        [
+          8,
+          9,
+          555
+        ]
+      ],
+      "confusion_matrix_png": "cm_hand_crafted_kNN.png",
+      "per_class": {
+        "Grasserie": {
+          "precision": 0.7714285714285715,
+          "recall": 0.5510204081632653,
+          "f1-score": 0.6428571428571429,
+          "support": 49.0
+        },
+        "Healthy": {
+          "precision": 0.9848484848484849,
+          "recall": 0.9848484848484849,
+          "f1-score": 0.9848484848484849,
+          "support": 594.0
+        },
+        "Infected": {
+          "precision": 0.947098976109215,
+          "recall": 0.9702797202797203,
+          "f1-score": 0.9585492227979274,
+          "support": 572.0
+        }
+      }
+    },
+    {
+      "feature_set": "mobilenet_embed",
+      "algorithm": "RandomForest",
+      "accuracy": 0.9605,
+      "f1_macro": 0.8179,
+      "confusion_matrix": [
+        [
+          17,
+          3,
+          29
+        ],
+        [
+          0,
+          591,
+          3
+        ],
+        [
+          1,
+          12,
+          559
+        ]
+      ],
+      "confusion_matrix_png": "cm_mobilenet_embed_RandomForest.png",
+      "per_class": {
+        "Grasserie": {
+          "precision": 0.9444444444444444,
+          "recall": 0.3469387755102041,
+          "f1-score": 0.5074626865671642,
+          "support": 49.0
+        },
+        "Healthy": {
+          "precision": 0.9752475247524752,
+          "recall": 0.9949494949494949,
+          "f1-score": 0.985,
+          "support": 594.0
+        },
+        "Infected": {
+          "precision": 0.9458544839255499,
+          "recall": 0.9772727272727273,
+          "f1-score": 0.9613069647463457,
+          "support": 572.0
+        }
+      }
+    },
+    {
+      "feature_set": "hand_crafted",
+      "algorithm": "GradientBoosting",
+      "accuracy": 0.9564,
+      "f1_macro": 0.8455,
+      "confusion_matrix": [
+        [
+          24,
+          1,
+          24
+        ],
+        [
+          0,
+          588,
+          6
+        ],
+        [
+          7,
+          15,
+          550
+        ]
+      ],
+      "confusion_matrix_png": "cm_hand_crafted_GradientBoosting.png",
+      "per_class": {
+        "Grasserie": {
+          "precision": 0.7741935483870968,
+          "recall": 0.4897959183673469,
+          "f1-score": 0.6,
+          "support": 49.0
+        },
+        "Healthy": {
+          "precision": 0.9735099337748344,
+          "recall": 0.98989898989899,
+          "f1-score": 0.9816360601001669,
+          "support": 594.0
+        },
+        "Infected": {
+          "precision": 0.9482758620689655,
+          "recall": 0.9615384615384616,
+          "f1-score": 0.9548611111111112,
+          "support": 572.0
+        }
+      }
+    },
+    {
+      "feature_set": "hand_crafted",
+      "algorithm": "SVM (RBF)",
+      "accuracy": 0.9531,
+      "f1_macro": 0.814,
+      "confusion_matrix": [
+        [
+          20,
+          0,
+          29
+        ],
+        [
+          0,
+          587,
+          7
+        ],
+        [
+          10,
+          11,
+          551
+        ]
+      ],
+      "confusion_matrix_png": "cm_hand_crafted_SVM_RBF.png",
+      "per_class": {
+        "Grasserie": {
+          "precision": 0.6666666666666666,
+          "recall": 0.40816326530612246,
+          "f1-score": 0.5063291139240507,
+          "support": 49.0
+        },
+        "Healthy": {
+          "precision": 0.9816053511705686,
+          "recall": 0.9882154882154882,
+          "f1-score": 0.9848993288590604,
+          "support": 594.0
+        },
+        "Infected": {
+          "precision": 0.938671209540034,
+          "recall": 0.9632867132867133,
+          "f1-score": 0.9508196721311475,
+          "support": 572.0
+        }
+      }
+    },
+    {
+      "feature_set": "hand_crafted",
+      "algorithm": "LogisticRegression",
+      "accuracy": 0.8337,
+      "f1_macro": 0.5663,
+      "confusion_matrix": [
+        [
+          0,
+          9,
+          40
+        ],
+        [
+          0,
+          552,
+          42
+        ],
+        [
+          0,
+          111,
+          461
+        ]
+      ],
+      "confusion_matrix_png": "cm_hand_crafted_LogisticRegression.png",
+      "per_class": {
+        "Grasserie": {
+          "precision": 0.0,
+          "recall": 0.0,
+          "f1-score": 0.0,
+          "support": 49.0
+        },
+        "Healthy": {
+          "precision": 0.8214285714285714,
+          "recall": 0.9292929292929293,
+          "f1-score": 0.8720379146919431,
+          "support": 594.0
+        },
+        "Infected": {
+          "precision": 0.848987108655617,
+          "recall": 0.8059440559440559,
+          "f1-score": 0.8269058295964126,
+          "support": 572.0
+        }
+      }
+    }
+  ]
+}

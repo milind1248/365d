@@ -7,12 +7,19 @@ Streamlit deployment: no Supabase, salted-hash passwords stored locally.
 import hashlib
 import hmac
 import os
+import secrets
+from datetime import datetime, timedelta, timezone
 
 import streamlit as st
 
 from core import db
 
 SESSION_USER_KEY = "auth_user"
+
+# "Remember me" cookie lifetime - see core/session_cookie.py, which issues
+# and restores the long-lived token this creates/validates. Long duration
+# per user request; a single knob to shorten later if needed.
+REMEMBER_ME_DAYS = 30
 
 
 def _hash_password(password: str, salt: str | None = None) -> str:
@@ -101,6 +108,37 @@ def current_user() -> dict | None:
     if not user_id:
         return None
     return db.fetch_one("user_profile", "id = ?", (user_id,))
+
+
+def create_session_token(user_id: str, days: int = REMEMBER_ME_DAYS) -> str:
+    """Issues a long-lived, random session token for a "remember me" cookie
+    (see core/session_cookie.py) - separate from the short-lived in-memory
+    st.session_state, which is lost on every full page reload."""
+    token = secrets.token_urlsafe(32)
+    expires_at = (datetime.now(timezone.utc) + timedelta(days=days)).isoformat()
+    db.insert_row("user_session", {"id": token, "user_id": user_id, "expires_at": expires_at})
+    return token
+
+
+def validate_session_token(token: str) -> dict | None:
+    """Returns the token's user if it exists, hasn't expired, and that
+    account is still active - None otherwise (also purges expired/orphaned
+    tokens so they don't linger)."""
+    row = db.fetch_one("user_session", "id = ?", (token,))
+    if not row:
+        return None
+    if row["expires_at"] < db.now_iso():
+        db.delete_row("user_session", token)
+        return None
+    user = db.fetch_one("user_profile", "id = ?", (row["user_id"],))
+    if not user or user.get("is_active") == 0:
+        db.delete_row("user_session", token)
+        return None
+    return user
+
+
+def revoke_session_token(token: str) -> None:
+    db.delete_row("user_session", token)
 
 
 def require_login() -> dict:

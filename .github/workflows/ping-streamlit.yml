@@ -1,0 +1,34 @@
+name: Ping Streamlit App
+
+# Streamlit Community Cloud puts idle apps to sleep. This pings the deployed
+# app every 10 minutes so it never goes idle long enough to sleep.
+#
+# IMPORTANT: replace the placeholder URL below with your app's real
+# https://<name>.streamlit.app URL once you've deployed (Settings on
+# share.streamlit.io shows the exact URL). The `|| true` on the ping step
+# means a wrong/placeholder URL fails silently (green checkmark, does
+# nothing) rather than failing loudly - so this workflow does nothing
+# useful until that one line is edited.
+
+on:
+  schedule:
+    - cron: "*/10 * * * *"
+  workflow_dispatch:
+
+jobs:
+  ping:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Install Chromium
+        run: sudo apt-get install -y chromium-browser
+
+      - name: Wake Streamlit app via headless browser
+        run: |
+          chromium-browser \
+            --headless \
+            --disable-gpu \
+            --no-sandbox \
+            --disable-dev-shm-usage \
+            --timeout=25000 \
+            https://REPLACE-WITH-YOUR-APP-URL.streamlit.app/ || true
+          echo "Ping done"

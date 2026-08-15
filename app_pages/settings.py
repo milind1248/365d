@@ -1,6 +1,6 @@
 import streamlit as st
 
-from core import auth, db
+from core import auth, db, session_cookie
 
 user = auth.require_login()
 
@@ -55,13 +55,13 @@ with tab_data:
     st.warning("This permanently deletes all your plots, scans, logs and records.")
     confirm = st.checkbox("I understand this cannot be undone")
     if st.button("Delete all my data", disabled=not confirm, icon=":material/delete_forever:"):
-        for table in ["farm_plot", "scan_record", "spray_log", "fertilizer_log", "soil_test", "crop_task", "production_record", "expert_case", "notification_item"]:
-            db.get_connection().execute(f"DELETE FROM {table} WHERE owner_id = ?", (user["id"],))
-        db.get_connection().commit()
+        tables = ["farm_plot", "scan_record", "spray_log", "fertilizer_log", "soil_test", "crop_task", "production_record", "expert_case", "notification_item"]
+        db.execute_transaction([(f"DELETE FROM {t} WHERE owner_id = ?", (user["id"],)) for t in tables])
         st.success("All your data has been deleted.")
         st.rerun()
 
     st.divider()
     if st.button("Log out", icon=":material/logout:"):
+        session_cookie.forget(session_cookie.get_shared_manager())
         auth.logout()
         st.rerun()

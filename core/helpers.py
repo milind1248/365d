@@ -8,11 +8,22 @@ from core import db
 RISK_COLORS = {"low": "green", "medium": "orange", "high": "red", "severe": "red"}
 RISK_LABELS = {"low": "Low", "medium": "Medium", "high": "High", "severe": "Severe"}
 
+PRIORITY_COLORS = {"critical": "red", "high": "orange", "medium": "blue", "low": "gray"}
+PRIORITY_ICONS = {"critical": "🔴", "high": "🟠", "medium": "🔵", "low": "⚪"}
+PRIORITY_ORDER = {"critical": 0, "high": 1, "medium": 2, "low": 3}
+
 
 def risk_badge(risk: str) -> str:
     color = RISK_COLORS.get(risk, "gray")
     label = RISK_LABELS.get(risk, risk.title())
     return f":{color}[**{label}**]"
+
+
+def priority_badge(priority: str) -> str:
+    color = PRIORITY_COLORS.get(priority, "gray")
+    icon = PRIORITY_ICONS.get(priority, "⚪")
+    label = (priority or "low").title()
+    return f"{icon} :{color}[**{label}**]"
 
 
 def confidence_badge(tier: str) -> str:
@@ -50,7 +61,10 @@ def parse_date(value: str, default: dt.date | None = None) -> dt.date:
         return default or dt.date.today()
 
 
-def add_notification(owner_id: str, ntype: str, title: str, body: str, related_record_id: str = "") -> None:
+def add_notification(
+    owner_id: str, ntype: str, title: str, body: str, related_record_id: str = "",
+    category: str = "general", priority: str = "low",
+) -> None:
     db.insert_row(
         "notification_item",
         {
@@ -61,5 +75,8 @@ def add_notification(owner_id: str, ntype: str, title: str, body: str, related_r
             "created_at": db.now_iso(),
             "is_read": 0,
             "related_record_id": related_record_id,
+            "category": category,
+            "priority": priority,
+            "status": "open",
         },
     )

@@ -100,11 +100,10 @@ for u in users:
             confirm_col.warning(f"Permanently delete {u['full_name'] or 'this user'} and all their data?")
             yes_col, no_col = confirm_col.columns(2)
             if yes_col.button("Yes, delete", key=f"yes_{u['id']}", type="primary"):
-                conn = db.get_connection()
-                with conn:
-                    for table in CASCADE_TABLES:
-                        conn.execute(f"DELETE FROM {table} WHERE owner_id = ?", (u["id"],))
-                    conn.execute("DELETE FROM user_profile WHERE id = ?", (u["id"],))
+                statements = [(f"DELETE FROM {table} WHERE owner_id = ?", (u["id"],)) for table in CASCADE_TABLES]
+                statements.append(("DELETE FROM user_session WHERE user_id = ?", (u["id"],)))
+                statements.append(("DELETE FROM user_profile WHERE id = ?", (u["id"],)))
+                db.execute_transaction(statements)
                 st.session_state.pop(confirm_key, None)
                 st.success("User deleted.")
                 st.rerun()
