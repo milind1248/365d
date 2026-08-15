@@ -1,0 +1,29 @@
+# Mulberry disease/pest/deficiency labels used by both MockModelService and
+# TFLiteModelService. Format: label_key|English name|Marathi name|Hindi name
+# Keep this list in sync with assets/data/diseases_knowledge_base.json and
+# the trained model's output class order - see docs/MODEL_INTEGRATION_GUIDE.md
+healthy_leaf|Healthy mulberry leaf|निरोगी तुतीचे पान|स्वस्थ शहतूत पत्ता
+powdery_mildew|Powdery mildew|भुरी रोग|चूर्णिल आसिता
+leaf_spot|Leaf spot|पानावरील ठिपके रोग|पत्ती धब्बा रोग
+leaf_rust|Leaf rust|पान गंज रोग|पत्ती रतुआ रोग
+bacterial_leaf_spot|Bacterial leaf spot|जीवाणूजन्य पान ठिपके|जीवाणु पत्ती धब्बा
+cercospora_leaf_spot|Cercospora leaf spot|सर्कोस्पोरा पान ठिपके|सर्कोस्पोरा पत्ती धब्बा
+myrothecium_leaf_spot|Myrothecium leaf spot|मायरोथेशियम पान ठिपके|मायरोथेशियम पत्ती धब्बा
+leaf_blight|Leaf blight|पान करपा रोग|पत्ती अंगमारी रोग
+root_rot|Root rot symptoms|मूळ कुज रोग|जड़ सड़न रोग
+stem_canker|Stem canker|खोड कँकर रोग|तना कैंकर रोग
+root_knot_nematode|Root knot nematode symptoms|मूळ गाठ सूत्रकृमी|जड़ गांठ सूत्रकृमि
+mealybug|Mealybug|मिलीबग|मिलीबग
+whitefly|Whitefly|पांढरी माशी|सफेद मक्खी
+thrips|Thrips|फुलकिडे|थ्रिप्स
+scale_insects|Scale insects|खवले कीड|शल्क कीट
+mites|Mites|कोळी|माइट्स
+leaf_roller_caterpillar|Leaf roller / caterpillar damage|पान गुंडाळणारी अळी|पत्ती लपेटक इल्ली
+nitrogen_deficiency|Nitrogen deficiency|नत्र कमतरता|नाइट्रोजन की कमी
+potassium_deficiency|Potassium deficiency|पालाश कमतरता|पोटैशियम की कमी
+magnesium_deficiency|Magnesium deficiency|मॅग्नेशियम कमतरता|मैग्नीशियम की कमी
+iron_deficiency|Iron deficiency|लोह कमतरता|लौह की कमी
+zinc_deficiency|Zinc deficiency|जस्त कमतरता|जस्ता की कमी
+water_stress|Water stress|पाण्याचा ताण|जल तनाव
+sun_scorch|Sun scorch|उन्हामुळे जळजळ|धूप से झुलसना
+chemical_spray_burn|Chemical spray burn|फवारणीमुळे जळजळ|रासायनिक छिड़काव से जलन

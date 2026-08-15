@@ -1,0 +1,24 @@
+__pycache__/
+*.pyc
+.venv/
+venv/
+
+# Secrets - never commit. Set the same keys in Streamlit Community Cloud's
+# app settings > Secrets when deploying (see README.md).
+.streamlit/secrets.toml
+
+# Local SQLite DB and uploaded scan photos - regenerated at runtime, and
+# ephemeral on Streamlit Community Cloud anyway. Keep the trained model
+# artifacts (mulberry_disease_model.joblib, model_metadata.json) tracked.
+data/mulberry_ai.db
+data/uploads/
+
+# Raw dataset download/extraction for training/train_compare.py - 11+ GB,
+# re-downloadable from Kaggle (nahiduzzaman13/mulberry-leaf-dataset). Keep
+# training/results/ (small PNGs + results.json) and the trained model
+# artifacts under data/ tracked.
+training/raw/
+training/*.zip
+training/*.log
+training/train_log.txt
+training/download_log.txt

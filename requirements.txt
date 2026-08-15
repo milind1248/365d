@@ -1,0 +1,15 @@
+streamlit>=1.57
+numpy
+pandas
+pillow
+scikit-learn
+joblib
+requests
+streamlit-geolocation
+
+# CPU-only PyTorch/torchvision for the MobileNetV3-Small leaf classifier
+# (ai/mobilenet_classifier.py). The extra index keeps Streamlit Cloud from
+# pulling the much larger CUDA build.
+--extra-index-url https://download.pytorch.org/whl/cpu
+torch
+torchvision
