@@ -1,13 +1,19 @@
-"""SQLite persistence layer for the 365Dfarms Mulberry AI Streamlit app.
+"""Persistence layer for the 365Dfarms Mulberry AI Streamlit app.
 
-Ported from the Flutter app's `database_helper.dart` schema so the two apps
-stay data-compatible. Every table keeps the original `sync_status` column
-even though this web build has no cloud sync target yet, for schema parity.
+Dual-backend, same principle as ai/weather.py and ai/chatbot.py's
+fallbacks: with no [supabase] secret configured, this runs on a local
+SQLite file (zero setup, good for dev/demo - but ephemeral on Streamlit
+Community Cloud, wiped on redeploy/sleep). Once `db_url` is set in
+secrets, every call here transparently goes to a Supabase/Postgres
+database instead - durable, and the only file that needed to change (see
+README.md "Migrating to Supabase (Postgres)").
 
-Note for Streamlit Community Cloud deployments: the filesystem is ephemeral
-(reset on redeploy / app sleep), so this SQLite file is a demo/local data
-store, not durable storage. See README.md for swapping in a hosted DB.
+Schema ported from the Flutter app's `database_helper.dart` so the two
+apps stay data-compatible. Every table keeps the original `sync_status`
+column even though this web build has no cloud sync target yet, for
+schema parity.
 """
+import os
 import sqlite3
 import threading
 import uuid
@@ -20,14 +26,12 @@ DB_PATH = Path(__file__).resolve().parent.parent / "data" / "mulberry_ai.db"
 UPLOAD_DIR = Path(__file__).resolve().parent.parent / "data" / "uploads"
 
 # Streamlit runs each script execution on its own thread, and st.cache_resource
-# shares ONE sqlite3.Connection (opened with check_same_thread=False) across
-# all of them. That flag only disables Python's same-thread safety check - it
-# does not make the connection itself safe for concurrent use. Two threads
-# racing (e.g. a rerun firing while the previous run's transaction is still
-# committing - this genuinely happened once with session_cookie.py's retry-
-# rerun) can corrupt the connection's transaction-state tracking, surfacing as
-# "sqlite3.OperationalError: cannot commit - no transaction is active". This
-# lock serializes all access to the shared connection to prevent that.
+# shares ONE connection across all of them. For SQLite that flag only disables
+# Python's same-thread safety check - it does not make the connection itself
+# safe for concurrent use (this genuinely caused "cannot commit - no
+# transaction is active" once, from a rerun racing session_cookie.py's retry-
+# rerun). Postgres connections have the same single-connection-shared-across-
+# threads hazard. This lock serializes all access to prevent either.
 _db_lock = threading.Lock()
 
 
@@ -139,8 +143,28 @@ SCHEMA = {
 TABLES = list(SCHEMA.keys())
 
 
+def _postgres_url() -> str | None:
+    cfg = st.secrets.get("supabase", {})
+    return cfg.get("db_url") or os.environ.get("SUPABASE_DB_URL")
+
+
+def _backend() -> str:
+    return "postgres" if _postgres_url() else "sqlite"
+
+
+def active_backend() -> str:
+    """'postgres' (Supabase) or 'sqlite' (local file) - whichever is live."""
+    return _backend()
+
+
 @st.cache_resource(show_spinner=False)
-def get_connection() -> sqlite3.Connection:
+def get_connection():
+    if _backend() == "postgres":
+        import psycopg2
+        import psycopg2.extras
+
+        return psycopg2.connect(_postgres_url(), cursor_factory=psycopg2.extras.RealDictCursor)
+
     DB_PATH.parent.mkdir(parents=True, exist_ok=True)
     conn = sqlite3.connect(str(DB_PATH), check_same_thread=False)
     conn.row_factory = sqlite3.Row
@@ -148,14 +172,36 @@ def get_connection() -> sqlite3.Connection:
     return conn
 
 
+def _exec(conn, sql: str, params=()):
+    """Runs sql/params on either backend and returns a cursor - sqlite3's
+    Connection.execute() is a convenience method Postgres connections
+    don't have, and Postgres uses %s placeholders instead of sqlite's ?,
+    so this is the one seam every call in this module goes through."""
+    if _backend() == "postgres":
+        cur = conn.cursor()
+        cur.execute(sql.replace("?", "%s"), params)
+        return cur
+    return conn.execute(sql, params)
+
+
 def init_db() -> None:
     conn = get_connection()
     with _db_lock, conn:
         for ddl in SCHEMA.values():
-            conn.execute(ddl)
+            _exec(conn, ddl)
     _migrate()
     with _db_lock, conn:
-        conn.execute("DELETE FROM user_session WHERE expires_at < ?", (now_iso(),))
+        _exec(conn, "DELETE FROM user_session WHERE expires_at < ?", (now_iso(),))
+
+
+def _live_columns(conn, table: str) -> set[str]:
+    """Uncached column lookup used only during _migrate(), before
+    _COLUMN_CACHE has necessarily been populated."""
+    if _backend() == "postgres":
+        cur = conn.cursor()
+        cur.execute("SELECT column_name FROM information_schema.columns WHERE table_name = %s", (table,))
+        return {r["column_name"] for r in cur.fetchall()}
+    return {r["name"] for r in conn.execute(f"PRAGMA table_info({table})")}
 
 
 def _migrate() -> None:
@@ -164,19 +210,19 @@ def _migrate() -> None:
     on an already-existing table, so new columns need an explicit ALTER."""
     conn = get_connection()
     with _db_lock:
-        existing_profile = {r["name"] for r in conn.execute("PRAGMA table_info(user_profile)")}
-        existing_notification = {r["name"] for r in conn.execute("PRAGMA table_info(notification_item)")}
+        existing_profile = _live_columns(conn, "user_profile")
+        existing_notification = _live_columns(conn, "notification_item")
         with conn:
             if "last_login_at" not in existing_profile:
-                conn.execute("ALTER TABLE user_profile ADD COLUMN last_login_at TEXT")
+                _exec(conn, "ALTER TABLE user_profile ADD COLUMN last_login_at TEXT")
             if "is_active" not in existing_profile:
-                conn.execute("ALTER TABLE user_profile ADD COLUMN is_active INTEGER DEFAULT 1")
+                _exec(conn, "ALTER TABLE user_profile ADD COLUMN is_active INTEGER DEFAULT 1")
             for col, coltype in (
                 ("category", "TEXT"), ("priority", "TEXT"), ("status", "TEXT"),
                 ("action_taken", "TEXT"), ("outcome", "TEXT"), ("resolved_at", "TEXT"),
             ):
                 if col not in existing_notification:
-                    conn.execute(f"ALTER TABLE notification_item ADD COLUMN {col} {coltype}")
+                    _exec(conn, f"ALTER TABLE notification_item ADD COLUMN {col} {coltype}")
     _COLUMN_CACHE.pop("user_profile", None)
     _COLUMN_CACHE.pop("notification_item", None)
 
@@ -202,7 +248,7 @@ def insert_row(table: str, row: dict) -> str:
     sql = f"INSERT INTO {table} ({', '.join(cols)}) VALUES ({placeholders})"
     conn = get_connection()
     with _db_lock, conn:
-        conn.execute(sql, [row[c] for c in cols])
+        _exec(conn, sql, [row[c] for c in cols])
     return row["id"]
 
 
@@ -213,13 +259,13 @@ def update_row(table: str, row_id: str, fields: dict) -> None:
     sql = f"UPDATE {table} SET {set_clause} WHERE id = ?"
     conn = get_connection()
     with _db_lock, conn:
-        conn.execute(sql, [*fields.values(), row_id])
+        _exec(conn, sql, [*fields.values(), row_id])
 
 
 def delete_row(table: str, row_id: str) -> None:
     conn = get_connection()
     with _db_lock, conn:
-        conn.execute(f"DELETE FROM {table} WHERE id = ?", (row_id,))
+        _exec(conn, f"DELETE FROM {table} WHERE id = ?", (row_id,))
 
 
 def fetch_all(table: str, where: str = "", params: tuple = (), order_by: str = "") -> list[dict]:
@@ -230,7 +276,7 @@ def fetch_all(table: str, where: str = "", params: tuple = (), order_by: str = "
         sql += f" ORDER BY {order_by}"
     conn = get_connection()
     with _db_lock:
-        cur = conn.execute(sql, params)
+        cur = _exec(conn, sql, params)
         return [dict(r) for r in cur.fetchall()]
 
 
@@ -245,7 +291,7 @@ def count(table: str, where: str = "", params: tuple = ()) -> int:
         sql += f" WHERE {where}"
     conn = get_connection()
     with _db_lock:
-        cur = conn.execute(sql, params)
+        cur = _exec(conn, sql, params)
         return cur.fetchone()["c"]
 
 
@@ -256,8 +302,7 @@ def _columns(table: str) -> list[str]:
     if table not in _COLUMN_CACHE:
         conn = get_connection()
         with _db_lock:
-            cur = conn.execute(f"PRAGMA table_info({table})")
-            _COLUMN_CACHE[table] = [r["name"] for r in cur.fetchall()]
+            _COLUMN_CACHE[table] = sorted(_live_columns(conn, table))
     return _COLUMN_CACHE[table]
 
 
@@ -268,11 +313,11 @@ def execute_transaction(statements: list[tuple[str, tuple]]) -> None:
     conn = get_connection()
     with _db_lock, conn:
         for sql, params in statements:
-            conn.execute(sql, params)
+            _exec(conn, sql, params)
 
 
 def wipe_all_tables() -> None:
     conn = get_connection()
     with _db_lock, conn:
         for table in TABLES:
-            conn.execute(f"DELETE FROM {table}")
+            _exec(conn, f"DELETE FROM {table}")

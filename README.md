@@ -9,7 +9,7 @@ weather-based spray guidance and expert help — built to run on
 
 | Area | How it works |
 |---|---|
-| **Database** | SQLite (`core/db.py`), schema ported 1:1 from the Flutter app's `database_helper.dart` (`user_profile`, `farm_plot`, `scan_record`, `spray_log`, `fertilizer_log`, `soil_test`, `crop_task`, `production_record`, `expert_case`, `notification_item`). Auto-created on first run. |
+| **Database** | `core/db.py` — SQLite locally (zero setup) or Supabase/Postgres once configured (see "Migrating to Supabase" below), same CRUD interface either way. Schema ported 1:1 from the Flutter app's `database_helper.dart` (`user_profile`, `farm_plot`, `scan_record`, `spray_log`, `fertilizer_log`, `soil_test`, `crop_task`, `production_record`, `expert_case`, `notification_item`, `silkworm_batch`, `user_session`). Auto-created on first run against either backend. |
 | **Auth** | `core/auth.py` — local register/login/guest, salted PBKDF2 password hashes, session via `st.session_state`. |
 | **AI / ML disease detection** | Two models, blended in `ai/classifier.py`. **Real-photo model**: `ai/mobilenet_classifier.py`, a MobileNetV3-Small fine-tuned on 1,091 real Kaggle leaf photos — 96.7% test accuracy on healthy/rust/spot. **Synthetic model**: `ai/features.py` extracts real color/texture features from the photo, `ai/train_model.py` trains a scikit-learn `RandomForestClassifier` on all 25 classes for the conditions with no real photo dataset yet. See "About the AI model" below. |
 | **Severity estimator** | `ai/severity.py` — pixel-level heuristic ported from the Flutter app's `SeverityEstimator`, estimates % affected leaf area. |
@@ -168,16 +168,61 @@ streamlit run streamlit_app.py
    **Settings → Secrets** in Streamlit Community Cloud and paste the same
    `[llm]` block shown above.
 
-### Persistent storage caveat
+### Persistent storage caveat (local SQLite)
 
 Streamlit Community Cloud's filesystem is **ephemeral** — it resets whenever
 the app redeploys or wakes from sleep. The bundled SQLite database
 (`data/mulberry_ai.db`) and uploaded scan photos (`data/uploads/`) are
-therefore fine for demos but **not durable** across redeploys. For a
-production deployment, swap `core/db.py`'s `get_connection()` for a hosted
-database (e.g. Supabase/Postgres via `st.connection`, or Turso/libSQL) — the
-rest of the app talks to `core/db.py`'s functions, not to SQLite directly, so
-only that one module needs to change.
+therefore fine for demos but **not durable** across redeploys — unless you
+set up Supabase below, in which case this caveat no longer applies.
+
+## Migrating to Supabase (Postgres)
+
+`core/db.py` is dual-backend: with no `[supabase]` secret it uses the local
+SQLite file above (zero setup); once `db_url` is set, every read/write in
+the app transparently goes to a Supabase Postgres database instead — no
+other file changes, since the rest of the app only ever calls `core/db.py`'s
+functions, never SQLite directly. You don't need to write or run any SQL
+by hand either — the same table definitions in `core/db.py`'s `SCHEMA` dict
+run as `CREATE TABLE IF NOT EXISTS` the first time the app starts against
+Postgres, so the schema creates itself.
+
+1. **Create a Supabase project** (if you haven't already) at
+   [supabase.com](https://supabase.com) — free tier is enough for this app's
+   scale.
+2. **Get the connection string.** In the project dashboard, click the green
+   **Connect** button (top nav) → under **Connection string**, select the
+   **Session pooler** tab (not Transaction pooler, not Direct connection —
+   Session pooler is what Supabase recommends for a long-running app that
+   holds one persistent connection, which is exactly what this app does) →
+   copy the URI. It looks like:
+   ```
+   postgresql://postgres.xxxxxxxxxxxx:[YOUR-PASSWORD]@aws-0-<region>.pooler.supabase.com:5432/postgres
+   ```
+   Replace `[YOUR-PASSWORD]` with your database password (the one you set
+   when creating the project — not your Supabase account login password;
+   reset it under **Project Settings → Database → Reset database password**
+   if you don't have it).
+3. Add to `.streamlit/secrets.toml` (gitignored — never commit this file):
+   ```toml
+   [supabase]
+   db_url = "postgresql://postgres.xxxxxxxxxxxx:your-actual-password@aws-0-<region>.pooler.supabase.com:5432/postgres"
+   ```
+   Alternatively, set the `SUPABASE_DB_URL` environment variable — same
+   `st.secrets`-first-then-env-var pattern as the Groq and email config
+   above.
+4. On Streamlit Community Cloud, paste the same `[supabase]` block into the
+   app's **Settings → Secrets** when you deploy.
+5. Restart the app (locally: re-run `streamlit run streamlit_app.py`; on
+   Streamlit Cloud: it restarts automatically when secrets change). The
+   tables get created automatically on that first connection — check
+   Supabase's **Table Editor** afterward to confirm they appeared.
+
+Existing local SQLite data (accounts, scans, logs, etc.) does **not** migrate
+automatically — the two databases are independent once Postgres is
+configured. If you have real data in the local SQLite file worth keeping,
+ask for a one-time export/import script rather than starting fresh in
+Supabase.
 
 ## Project layout
 
@@ -187,7 +232,7 @@ app_pages/                # one file per page (dashboard, scan, farm, logs, ...)
   scan_silkworm.py         # silkworm disease AI scan page
   silkworm_tracking.py     # silkworm rearing batch tracking (instar/feeding/mortality)
 core/
-  db.py                  # SQLite schema + CRUD helpers
+  db.py                  # schema + CRUD helpers - SQLite locally, Supabase/Postgres once configured
   auth.py                # register/login/guest session, access-revocation check
   session_cookie.py        # "remember me" persistent login cookie
   helpers.py              # shared UI helpers (badges, plot pickers, notifications)

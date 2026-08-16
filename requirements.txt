@@ -7,6 +7,7 @@ joblib
 requests
 streamlit-geolocation
 extra-streamlit-components
+psycopg2-binary
 
 # CPU-only PyTorch/torchvision for the MobileNetV3-Small leaf classifier
 # (ai/mobilenet_classifier.py). The extra index keeps Streamlit Cloud from
