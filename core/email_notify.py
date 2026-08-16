@@ -111,7 +111,7 @@ def send_welcome_email(full_name: str, to_email: str) -> None:
         f"Go Grow Green!\n"
         f"Team 365Dfarms"
     )
-    send_notification_email("Welcome to 365Dfarms Mulberry AI!", body, to_addr=to_email.strip())
+    send_notification_email("Welcome to 365D", body, to_addr=to_email.strip())
 
 
 def notify_new_expert_case(farmer_name: str, farmer_mobile: str, description: str, location: str, crop_age_months) -> None:
