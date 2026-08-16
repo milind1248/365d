@@ -1,6 +1,6 @@
 import streamlit as st
 
-from core import auth, db
+from core import auth, db, email_notify
 from core.helpers import add_notification, plot_options
 
 user = auth.require_login()
@@ -33,6 +33,7 @@ with st.expander("➕ Submit a new case", expanded=True):
                 },
             )
             add_notification(owner_id, "expert_case", "Case submitted", "Your case was submitted and is pending expert review.")
+            email_notify.notify_new_expert_case(user["full_name"], user.get("mobile_number"), description.strip(), location, crop_age)
             st.success("Case submitted. You'll see the expert's reply here once reviewed.")
             st.rerun()
 

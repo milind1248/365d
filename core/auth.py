@@ -12,7 +12,7 @@ from datetime import datetime, timedelta, timezone
 
 import streamlit as st
 
-from core import db
+from core import db, email_notify
 
 SESSION_USER_KEY = "auth_user"
 
@@ -65,6 +65,8 @@ def register(full_name: str, mobile_number: str, email: str, password: str, pref
         },
     )
     st.session_state[SESSION_USER_KEY] = user_id
+    email_notify.notify_new_signup(full_name.strip(), mobile_number.strip(), email.strip())
+    email_notify.send_welcome_email(full_name.strip(), email.strip())
     return True, "Account created."
 
 

@@ -24,6 +24,7 @@ weather-based spray guidance and expert help — built to run on
 | **Silkworm AI scan** | `app_pages/scan_silkworm.py` + `ai/silkworm_classifier.py` — a second, independent MobileNetV3-Small model fine-tuned on real silkworm larva photos, for healthy / Grasserie / generic-infected detection. See "About the silkworm AI model" below. |
 | **Silkworm rearing tracking** | `app_pages/silkworm_tracking.py` — log rearing batches (instar stage, mortality %, last-fed time); feeds the Alert Engine's feeding/instar/mortality reminders. |
 | **Alert Engine** | `ai/alert_engine.py` — categorizes and prioritizes every notification (disease/climate/feeding/instar/mortality/general × critical/high/medium/low), with dedup so the same condition doesn't re-alert every rerun. **Account → Notifications** got a full rework: filter by category/status, mark alerts completed/skipped with an optional outcome note. The Dashboard shows a live open-alerts summary by priority. |
+| **Admin email alerts** | `core/email_notify.py` — sends an email to the operator inbox (365dfarmsai@gmail.com by default) on every new signup and every new Expert Help case. No-op until Gmail SMTP secrets are configured (see "Email notifications setup" below); the app works fully without it either way. |
 
 ## ⚠️ Admin access is hardcoded — fix before any real deployment
 
@@ -94,6 +95,44 @@ something is wrong, not which specific disease — `data/silkworm_knowledge_base
 no synthetic-fallback classifier here: silkworm body-color heuristics aren't
 a validated signal the way leaf-color heuristics are, so below-confidence
 results show "inconclusive" instead of inventing a diagnosis.
+
+## Email notifications setup (Gmail)
+
+`core/email_notify.py` sends an admin notification email to
+**365dfarmsai@gmail.com** whenever (1) a new farmer account is created, or
+(2) a farmer submits a case in **Advisory → Expert Help**. It works out of
+the box with no configuration — if the SMTP secrets below aren't set, these
+calls are a silent no-op and the app behaves exactly as before (same "must
+run end-to-end without external services" principle as the weather/chatbot
+fallbacks).
+
+To enable it:
+
+1. Enable **2-Step Verification** on the sending Gmail account (Google
+   requires this before it will issue an App Password — a regular account
+   password no longer works for SMTP at all, for any Gmail account):
+   [myaccount.google.com/security](https://myaccount.google.com/security)
+2. Generate an **App Password** for "Mail":
+   [myaccount.google.com/apppasswords](https://myaccount.google.com/apppasswords)
+   — a 16-character code, shown once. This is what goes in the config
+   below, **not** the account's real login password.
+3. Add to `.streamlit/secrets.toml` (gitignored — never commit this file):
+   ```toml
+   [email]
+   smtp_user = "your-sending-account@gmail.com"
+   smtp_password = "xxxx xxxx xxxx xxxx"   # the 16-char App Password, spaces are fine
+   notify_to = "365dfarmsai@gmail.com"     # optional - this is already the default
+   ```
+   Alternatively, set `SMTP_USER` / `SMTP_PASSWORD` / `EMAIL_NOTIFY_TO`
+   environment variables — `core/email_notify.py` checks `st.secrets` first,
+   then falls back to env vars, same pattern as the Groq key below.
+4. On Streamlit Community Cloud, paste the same `[email]` block into the
+   app's **Settings → Secrets**.
+
+The sending account can be any Gmail address (a dedicated one is
+recommended over a personal inbox) — it doesn't have to be
+365dfarmsai@gmail.com itself, since `smtp_user` (who sends) and `notify_to`
+(who receives) are configured separately.
 
 ## Chatbot setup (Groq)
 
